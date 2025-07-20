@@ -63,9 +63,9 @@ async def get_supported_models(
 
 @router.get("/search")
 async def search_models(
+    model_discovery: ModelDiscoveryServiceDep,
     q: str = Query(..., description="Search query for model names"),
-    limit: int = Query(10, ge=1, le=50, description="Maximum number of results"),
-    model_discovery: ModelDiscoveryServiceDep
+    limit: int = Query(10, ge=1, le=50, description="Maximum number of results")
 ) -> List[ModelSearchResult]:
     """Search for models by name or partial name."""
     try:
@@ -82,8 +82,8 @@ async def search_models(
 
 @router.get("/match")
 async def match_model(
-    name: str = Query(..., description="Model name to match"),
-    model_discovery: ModelDiscoveryServiceDep
+    model_discovery: ModelDiscoveryServiceDep,
+    name: str = Query(..., description="Model name to match")
 ) -> ModelMatchResult:
     """Find the best matching model for a given name."""
     try:
