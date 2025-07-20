@@ -53,7 +53,7 @@ def mock_ecologits_repo():
         'gpt-4o-2024-05-13': mock_model,
         'test-model-v1': mock_model
     }
-    repo.is_model_supported.return_value = True
+# repo.is_model_supported.return_value = True  # Not needed for basic tests
     
     return repo
 

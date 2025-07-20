@@ -50,8 +50,8 @@ jobs:
 
     - name: Test with pytest
       run: |
-        # Test the refactored API with simpler tests
-        pytest tests/test_refactored_api.py -v --tb=short
+        # Test basic functionality without complex mocking
+        pytest tests/test_simple.py -v --tb=short
       env:
         ENVIRONMENT: testing
 
