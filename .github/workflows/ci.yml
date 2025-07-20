@@ -104,21 +104,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        # Test basic import
-        python -c "
-import sys
-sys.path.insert(0, '.')
-from src.application import create_app
-print('✅ Application builds successfully')
-"
+        python -c "import sys; sys.path.insert(0, '.'); from src.application import create_app; print('✅ Application builds successfully')"
 
     - name: Test application startup
       run: |
-        # Test that the application can be imported and created
-        python -c "
-from src.application import create_app
-app = create_app()
-print('✅ Application builds and imports successfully')
-"
+        python -c "from src.application import create_app; app = create_app(); print('✅ Application builds and imports successfully')"
       env:
         ENVIRONMENT: testing
