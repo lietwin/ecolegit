@@ -25,10 +25,24 @@ async def health_check(
     logger.debug("Health check requested")
     status = health_service.get_health_status()
     
+    # Check EcoLogits availability
+    try:
+        from ecologits.impacts import Impacts
+        from ecologits.model_repository import models
+        ecologits_status = "available"
+        model_count = len(models)
+    except ImportError as e:
+        ecologits_status = f"unavailable: {e}"
+        model_count = 0
+    
     return {
         "status": status.status,
         "service": status.service,
-        "timestamp": status.timestamp
+        "timestamp": status.timestamp,
+        "dependencies": {
+            "ecologits": ecologits_status,
+            "available_models": model_count
+        }
     }
 
 

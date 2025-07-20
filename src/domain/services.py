@@ -67,8 +67,13 @@ class ImpactCalculationService:
             )
 
         except Exception as e:
-            logger.error(f"Calculation error for model {model}: {e}")
-            return CalculationResult.error_result(ErrorMessages.INTERNAL_CALCULATION_ERROR)
+            logger.error(f"Calculation error for model {model}: {type(e).__name__}: {e}")
+            # In development, show more details
+            if normalized_model:
+                error_detail = f"Calculation failed for {normalized_model}: {type(e).__name__}"
+            else:
+                error_detail = f"Model normalization failed: {type(e).__name__}"
+            return CalculationResult.error_result(error_detail)
 
     def _normalize_model(self, model_name: str) -> str:
         """Normalize model name using configuration mappings."""

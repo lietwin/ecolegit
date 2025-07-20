@@ -3,8 +3,15 @@
 import logging
 from typing import Dict
 
-from ecologits.impacts import Impacts
-from ecologits.model_repository import models
+try:
+    from ecologits.impacts import Impacts
+    from ecologits.model_repository import models
+    ECOLOGITS_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"EcoLogits not available: {e}")
+    ECOLOGITS_AVAILABLE = False
+    Impacts = None
+    models = {}
 
 from ..domain.services import EcologitsRepository
 
@@ -21,6 +28,8 @@ class EcologitsAdapter(EcologitsRepository):
 
     def __init__(self):
         """Initialize the ecologits adapter."""
+        if not ECOLOGITS_AVAILABLE:
+            raise EcologitsServiceError("EcoLogits library is not installed or available")
         self._models = models
         logger.info("EcologitsAdapter initialized")
 
