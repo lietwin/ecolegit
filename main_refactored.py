@@ -8,6 +8,9 @@ from src.config.constants import Environment
 
 logger = logging.getLogger(__name__)
 
+# Create app instance for ASGI servers
+app = create_app()
+
 
 def main() -> None:
     """Main application entry point."""
@@ -16,7 +19,8 @@ def main() -> None:
         config_loader = ConfigLoader()
         config = config_loader.load()
         
-        # Create FastAPI application
+        # For Render deployment, we need to export the app
+        global app
         app = create_app()
         
         # Run server

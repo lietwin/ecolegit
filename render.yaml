@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: ecolegits-webhook
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main_refactored.py
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: 8000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    autoDeploy: true
+    healthCheckPath: /health
