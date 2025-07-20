@@ -1,7 +1,7 @@
 """Model registry and discovery API endpoints."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -112,7 +112,7 @@ async def match_model(
 @router.post("/refresh")
 async def refresh_model_cache(
     model_discovery: ModelDiscoveryServiceDep
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Force refresh of the model cache from EcoLogits."""
     try:
         models = model_discovery.refresh_cache()
@@ -130,7 +130,7 @@ async def refresh_model_cache(
 @router.get("/providers")
 async def get_providers(
     model_discovery: ModelDiscoveryServiceDep
-) -> Dict[str, Dict[str, any]]:
+) -> Dict[str, Dict[str, Any]]:
     """Get information about supported providers."""
     try:
         by_provider = model_discovery.get_models_by_provider()
@@ -153,7 +153,7 @@ async def get_providers(
 async def validate_model(
     model_name: str,
     model_discovery: ModelDiscoveryServiceDep
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Validate if a model name is supported and get suggestions if not."""
     try:
         match = model_discovery.find_best_match(model_name)
