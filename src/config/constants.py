@@ -80,18 +80,28 @@ class ErrorMessages:
 
 
 class ModelMappings:
-    """Default model mappings."""
+    """Default model mappings from versioned model names to EcoLogits model names."""
     DEFAULT_MAPPINGS = {
-        "gpt-4o": "gpt-4o-2024-05-13",
-        "gpt-4o-mini": "gpt-4o-mini-2024-07-18",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-0125",
-        "gpt-4": "gpt-4-0613",
-        "claude-3-opus": "claude-3-opus-20240229",
-        "claude-3-sonnet": "claude-3-sonnet-20240229",
-        "claude-3-haiku": "claude-3-haiku-20240307",
-        "claude-3-5-sonnet": "claude-3-5-sonnet-20240620",
-        "gemini-pro": "gemini-1.0-pro",
-        "gemini-1.5-pro": "gemini-1.5-pro-001"
+        # OpenAI models - map versioned names to simple names EcoLogits expects
+        "gpt-4o-2024-05-13": "gpt-4o",
+        "gpt4o-2024-05-13": "gpt-4o",  # Handle both formats
+        "gpt-4o-mini-2024-07-18": "gpt-4o-mini",
+        "gpt4o-mini-2024-07-18": "gpt-4o-mini",
+        "gpt-3.5-turbo-0125": "gpt-3.5-turbo",
+        "gpt-4-0613": "gpt-4",
+        # Anthropic models
+        "claude-3-opus-20240229": "claude-3-opus",
+        "claude-3-sonnet-20240229": "claude-3-sonnet", 
+        "claude-3-haiku-20240307": "claude-3-haiku",
+        "claude-3-5-sonnet-20240620": "claude-3-5-sonnet",
+        # Google models
+        "gemini-1.0-pro": "gemini-pro",
+        "gemini-1.5-pro-001": "gemini-1.5-pro",
+        # Also support direct simple names (pass-through)
+        "gpt-4o": "gpt-4o",
+        "gpt-4o-mini": "gpt-4o-mini",
+        "gpt-3.5-turbo": "gpt-3.5-turbo",
+        "gpt-4": "gpt-4"
     }
 
 
