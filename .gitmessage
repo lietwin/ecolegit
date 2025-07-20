@@ -1,0 +1,29 @@
+# <type>[optional scope]: <description>
+#
+# [optional body]
+#
+# [optional footer(s)]
+#
+# Type can be:
+#   feat     (new feature)
+#   fix      (bug fix)
+#   docs     (documentation)
+#   style    (formatting, missing semi colons, etc; no code change)
+#   refactor (refactoring production code)
+#   test     (adding tests, refactoring test; no production code change)
+#   chore    (updating build tasks, package manager configs; no production code change)
+#   perf     (performance improvements)
+#   ci       (continuous integration changes)
+#   build    (build system or external dependencies)
+#   revert   (reverting a previous commit)
+#
+# Scope examples:
+#   api, auth, config, domain, infra, security, tests
+#
+# Examples:
+#   feat(api): add environmental impact calculation endpoint
+#   fix(auth): resolve API key validation issue
+#   docs: update installation instructions
+#   refactor(domain): extract calculation service from controller
+#   test(api): add integration tests for webhook signature verification
+#   chore(deps): update FastAPI to v0.104.0
