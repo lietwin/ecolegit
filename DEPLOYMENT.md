@@ -14,7 +14,7 @@
    Name: ecolegits-webhook
    Branch: main
    Build Command: pip install -r requirements.txt
-   Start Command: python main_refactored.py
+   Start Command: python main.py
    ```
 
 3. **Set Environment Variables**

@@ -51,7 +51,7 @@ src/
 
 3. **Run the application**
    ```bash
-   python main_refactored.py
+   python main.py
    ```
 
 4. **Access the API**
@@ -201,10 +201,10 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY src/ src/
-COPY main_refactored.py .
+COPY main.py .
 
 EXPOSE 8000
-CMD ["python", "main_refactored.py"]
+CMD ["python", "main.py"]
 ```
 
 ### Environment-specific Deployment
@@ -214,7 +214,7 @@ CMD ["python", "main_refactored.py"]
 export ENVIRONMENT=production
 export API_KEY="prod-api-key"
 export WEBHOOK_SECRET="prod-webhook-secret"
-python main_refactored.py
+python main.py
 ```
 
 ## 📈 **Monitoring**
