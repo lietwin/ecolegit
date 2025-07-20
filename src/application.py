@@ -10,6 +10,7 @@ from .api.dependencies import initialize_dependencies
 from .api.middleware import setup_middleware, setup_rate_limiting
 from .api.routes.calculation import create_calculation_router
 from .api.routes.health import router as health_router, create_test_router
+from .api.routes.models import router as models_router
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,9 @@ class ApplicationFactory:
         
         # Health and info routes (no rate limiting)
         app.include_router(health_router, tags=["health"])
+        
+        # Model registry routes (no rate limiting)
+        app.include_router(models_router, prefix="/api", tags=["models"])
         
         # Calculation routes (with rate limiting)
         calculation_router = create_calculation_router(limiter)

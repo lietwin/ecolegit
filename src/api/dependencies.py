@@ -13,6 +13,7 @@ from ..domain.services import (
     ModelInfoService,
     TestService
 )
+from ..domain.model_discovery import ModelDiscoveryService
 from ..infrastructure.security import SecurityManager, SecurityFactory
 from ..infrastructure.ecologits_adapter import EcologitsAdapter
 
@@ -35,14 +36,16 @@ def initialize_dependencies(config: AppConfig) -> None:
     _ecologits_adapter = EcologitsAdapter()
     
     # Initialize services
-    impact_service = ImpactCalculationService(_ecologits_adapter, config)
+    model_discovery_service = ModelDiscoveryService(_ecologits_adapter)
+    impact_service = ImpactCalculationService(_ecologits_adapter, config, model_discovery_service)
     
     _services = {
         'impact_calculation': impact_service,
         'calculation_id': CalculationIdService(),
         'health': HealthService(),
         'model_info': ModelInfoService(_ecologits_adapter, config),
-        'test': TestService(impact_service)
+        'test': TestService(impact_service),
+        'model_discovery': model_discovery_service
     }
     
     logger.info("Dependencies initialized successfully")
@@ -97,6 +100,13 @@ def get_test_service() -> TestService:
     return _services['test']
 
 
+def get_model_discovery_service() -> ModelDiscoveryService:
+    """Get model discovery service."""
+    if 'model_discovery' not in _services:
+        raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
+    return _services['model_discovery']
+
+
 # FastAPI security dependency
 security = HTTPBearer(auto_error=False)
 
@@ -117,4 +127,5 @@ CalculationIdServiceDep = Annotated[CalculationIdService, Depends(get_calculatio
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ModelInfoServiceDep = Annotated[ModelInfoService, Depends(get_model_info_service)]
 TestServiceDep = Annotated[TestService, Depends(get_test_service)]
+ModelDiscoveryServiceDep = Annotated[ModelDiscoveryService, Depends(get_model_discovery_service)]
 AuthenticatedDep = Annotated[bool, Depends(verify_authentication)]

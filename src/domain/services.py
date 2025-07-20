@@ -32,9 +32,10 @@ class EcologitsRepository(Protocol):
 class ImpactCalculationService:
     """Service for calculating environmental impact."""
 
-    def __init__(self, ecologits_repo: EcologitsRepository, config: AppConfig):
+    def __init__(self, ecologits_repo: EcologitsRepository, config: AppConfig, model_discovery_service=None):
         self._ecologits_repo = ecologits_repo
         self._config = config
+        self._model_discovery_service = model_discovery_service
 
     def calculate_impact(self, model: str, input_tokens: int, output_tokens: int) -> CalculationResult:
         """Calculate environmental impact with proper error handling."""
@@ -75,8 +76,20 @@ class ImpactCalculationService:
             return CalculationResult.error_result(error_detail)
 
     def _normalize_model(self, model_name: str) -> str:
-        """Normalize model name using configuration mappings."""
-        return self._config.model_mappings.get(model_name.lower(), model_name)
+        """Normalize model name using dynamic model discovery or fallback to config mappings."""
+        if self._model_discovery_service:
+            # Use dynamic model discovery
+            match = self._model_discovery_service.find_best_match(model_name)
+            if match and match.confidence >= 0.6:  # Accept matches with 60%+ confidence
+                logger.debug(f"Model '{model_name}' matched to '{match.matched_name}' via {match.match_type} (confidence: {match.confidence:.2f})")
+                return match.matched_name
+            else:
+                # No good match found
+                logger.warning(f"No suitable match found for model '{model_name}'")
+                return model_name
+        else:
+            # Fallback to static mappings (for backwards compatibility)
+            return self._config.model_mappings.get(model_name.lower(), model_name)
 
 
 class CalculationIdService:
