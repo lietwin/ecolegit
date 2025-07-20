@@ -3,6 +3,8 @@
 import logging
 from typing import Dict
 
+logger = logging.getLogger(__name__)
+
 try:
     from ecologits.impacts import Impacts
     from ecologits.model_repository import models
@@ -14,8 +16,6 @@ except ImportError as e:
     models = {}
 
 from ..domain.services import EcologitsRepository
-
-logger = logging.getLogger(__name__)
 
 
 class EcologitsServiceError(Exception):
