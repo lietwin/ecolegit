@@ -47,8 +47,7 @@ class ImpactCalculationService:
             normalized_model = self._normalize_model(model)
             
             # Check if model is supported
-            available_models = self._ecologits_repo.get_available_models()
-            if normalized_model not in available_models:
+            if not self._ecologits_repo.is_model_supported(normalized_model):
                 error_msg = ErrorMessages.MODEL_NOT_SUPPORTED.format(model=normalized_model)
                 return CalculationResult.error_result(error_msg)
 

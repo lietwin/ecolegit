@@ -82,39 +82,38 @@ class EcologitsAdapter(EcologitsRepository):
         """Get all available models from ecologits repository."""
         try:
             # ModelRepository is not directly iterable, need to access its models
-            if hasattr(self._models, '_models'):
+            if hasattr(self._models, '_models') and hasattr(self._models._models, 'items'):
                 return dict(self._models._models)
-            elif hasattr(self._models, 'models'):
+            elif hasattr(self._models, 'models') and hasattr(self._models.models, 'items'):
                 return dict(self._models.models)
             else:
-                # Try to get all model names and create dict
+                # Iterate through attributes to find model objects
                 model_dict = {}
                 for attr_name in dir(self._models):
-                    if not attr_name.startswith('_'):
+                    if not attr_name.startswith('_') and not attr_name.startswith('__'):
                         try:
-                            model = getattr(self._models, attr_name)
-                            if hasattr(model, 'name') or not callable(model):
-                                model_dict[attr_name] = model
-                        except:
+                            attr_value = getattr(self._models, attr_name)
+                            # Skip methods and properties
+                            if not callable(attr_value) and not isinstance(attr_value, property):
+                                model_dict[attr_name] = attr_value
+                        except Exception:
                             continue
                 return model_dict
         except Exception as e:
             logger.error(f"Error getting available models: {e}")
-            # Return empty dict as fallback
             return {}
 
     def is_model_supported(self, model_name: str) -> bool:
         """Check if model is supported by ecologits."""
         try:
-            if hasattr(self._models, 'get'):
-                return self._models.get(model_name) is not None
-            elif hasattr(self._models, model_name):
-                return True
-            elif hasattr(self._models, '_models'):
+            # Check if model exists using getattr
+            if hasattr(self._models, model_name):
+                return getattr(self._models, model_name, None) is not None
+            elif hasattr(self._models, '_models') and hasattr(self._models._models, '__contains__'):
                 return model_name in self._models._models
-            elif hasattr(self._models, 'models'):
+            elif hasattr(self._models, 'models') and hasattr(self._models.models, '__contains__'):
                 return model_name in self._models.models
             else:
                 return False
-        except:
+        except Exception:
             return False

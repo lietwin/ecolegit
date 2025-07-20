@@ -33,14 +33,15 @@ async def health_check(
         
         # Try to get model count safely
         try:
-            if hasattr(models, '_models'):
+            if hasattr(models, '_models') and hasattr(models._models, '__len__'):
                 model_count = len(models._models)
-            elif hasattr(models, 'models'):
+            elif hasattr(models, 'models') and hasattr(models.models, '__len__'):
                 model_count = len(models.models)
             else:
-                # Count non-private attributes
-                model_count = len([attr for attr in dir(models) if not attr.startswith('_')])
-        except:
+                # Count non-private attributes as fallback
+                attrs = [attr for attr in dir(models) if not attr.startswith('_') and not callable(getattr(models, attr, None))]
+                model_count = len(attrs)
+        except Exception:
             model_count = "unknown"
             
     except ImportError as e:
