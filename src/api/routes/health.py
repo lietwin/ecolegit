@@ -30,7 +30,19 @@ async def health_check(
         from ecologits.impacts import Impacts
         from ecologits.model_repository import models
         ecologits_status = "available"
-        model_count = len(models)
+        
+        # Try to get model count safely
+        try:
+            if hasattr(models, '_models'):
+                model_count = len(models._models)
+            elif hasattr(models, 'models'):
+                model_count = len(models.models)
+            else:
+                # Count non-private attributes
+                model_count = len([attr for attr in dir(models) if not attr.startswith('_')])
+        except:
+            model_count = "unknown"
+            
     except ImportError as e:
         ecologits_status = f"unavailable: {e}"
         model_count = 0
@@ -58,6 +70,38 @@ async def get_supported_models(
         "supported_models": info.supported_models,
         "total_ecologits_models": info.total_ecologits_models
     }
+
+
+@router.get("/debug/models")
+async def debug_models_structure():
+    """Debug endpoint to inspect EcoLogits models structure (non-production only)."""
+    try:
+        from ecologits.model_repository import models
+        
+        model_info = {
+            "type": str(type(models)),
+            "attributes": [attr for attr in dir(models) if not attr.startswith('_')],
+            "has_models_attr": hasattr(models, 'models'),
+            "has_private_models_attr": hasattr(models, '_models'),
+            "has_get_method": hasattr(models, 'get'),
+            "has_keys_method": hasattr(models, 'keys'),
+            "is_dict_like": hasattr(models, '__getitem__'),
+        }
+        
+        # Try to get a few sample models
+        sample_models = {}
+        for attr in model_info["attributes"][:5]:  # Just first 5
+            try:
+                sample_models[attr] = str(type(getattr(models, attr)))
+            except:
+                pass
+                
+        return {
+            "model_repository_info": model_info,
+            "sample_models": sample_models
+        }
+    except ImportError as e:
+        return {"error": f"EcoLogits not available: {e}"}
 
 
 def create_test_router() -> APIRouter:

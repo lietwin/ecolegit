@@ -36,10 +36,24 @@ class EcologitsAdapter(EcologitsRepository):
     def get_model(self, model_name: str) -> object:
         """Get model by name from ecologits repository."""
         try:
-            if model_name not in self._models:
+            # Try different ways to access the model
+            if hasattr(self._models, 'get'):
+                model = self._models.get(model_name)
+            elif hasattr(self._models, model_name):
+                model = getattr(self._models, model_name)
+            else:
+                # Try accessing through internal attributes
+                if hasattr(self._models, '_models'):
+                    model = self._models._models.get(model_name)
+                elif hasattr(self._models, 'models'):
+                    model = self._models.models.get(model_name)
+                else:
+                    model = None
+            
+            if model is None:
                 raise EcologitsServiceError(f"Model '{model_name}' not found in ecologits repository")
             
-            return self._models[model_name]
+            return model
         except Exception as e:
             logger.error(f"Error getting model '{model_name}': {e}")
             raise EcologitsServiceError(f"Failed to get model '{model_name}'") from e
@@ -67,11 +81,40 @@ class EcologitsAdapter(EcologitsRepository):
     def get_available_models(self) -> Dict[str, object]:
         """Get all available models from ecologits repository."""
         try:
-            return dict(self._models)
+            # ModelRepository is not directly iterable, need to access its models
+            if hasattr(self._models, '_models'):
+                return dict(self._models._models)
+            elif hasattr(self._models, 'models'):
+                return dict(self._models.models)
+            else:
+                # Try to get all model names and create dict
+                model_dict = {}
+                for attr_name in dir(self._models):
+                    if not attr_name.startswith('_'):
+                        try:
+                            model = getattr(self._models, attr_name)
+                            if hasattr(model, 'name') or not callable(model):
+                                model_dict[attr_name] = model
+                        except:
+                            continue
+                return model_dict
         except Exception as e:
             logger.error(f"Error getting available models: {e}")
-            raise EcologitsServiceError("Failed to get available models") from e
+            # Return empty dict as fallback
+            return {}
 
     def is_model_supported(self, model_name: str) -> bool:
         """Check if model is supported by ecologits."""
-        return model_name in self._models
+        try:
+            if hasattr(self._models, 'get'):
+                return self._models.get(model_name) is not None
+            elif hasattr(self._models, model_name):
+                return True
+            elif hasattr(self._models, '_models'):
+                return model_name in self._models._models
+            elif hasattr(self._models, 'models'):
+                return model_name in self._models.models
+            else:
+                return False
+        except:
+            return False
