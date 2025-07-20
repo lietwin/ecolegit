@@ -97,9 +97,11 @@ class ModelMappings:
         # Google models
         "gemini-1.0-pro": "gemini-pro",
         "gemini-1.5-pro-001": "gemini-1.5-pro",
-        # Also support direct simple names (pass-through)
+        # Also support direct simple names (pass-through) and common variations
         "gpt-4o": "gpt-4o",
+        "gpt4o": "gpt-4o",  # Common user input without hyphens
         "gpt-4o-mini": "gpt-4o-mini",
+        "gpt4o-mini": "gpt-4o-mini",
         "gpt-3.5-turbo": "gpt-3.5-turbo",
         "gpt-4": "gpt-4"
     }
