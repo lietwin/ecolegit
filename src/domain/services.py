@@ -27,6 +27,10 @@ class EcologitsRepository(Protocol):
     def get_available_models(self) -> Dict[str, object]:
         """Get all available models."""
         ...
+    
+    def is_model_supported(self, model_name: str) -> bool:
+        """Check if model is supported."""
+        ...
 
 
 class ImpactCalculationService:
@@ -61,8 +65,8 @@ class ImpactCalculationService:
             )
 
             return CalculationResult.success_result(
-                energy_kwh=float(impacts.energy.value),
-                gwp_kgco2eq=float(impacts.gwp.value),
+                energy_kwh=float(impacts.energy.value.mean),
+                gwp_kgco2eq=float(impacts.gwp.value.mean),
                 normalized_model=normalized_model
             )
 
