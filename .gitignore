@@ -257,3 +257,8 @@ settings.local.py
 
 # Backup files
 *.backup
+
+# Analysis and thinking files  
+*_thinking.md
+*_analysis.md
+REFACTORING_SUMMARY.md

@@ -27,22 +27,15 @@ async def health_check(
     
     # Check EcoLogits availability
     try:
-        from ecologits.impacts import Impacts
         from ecologits.model_repository import models
         ecologits_status = "available"
         
-        # Try to get model count safely
+        # Get model count using simplified approach
         try:
-            if hasattr(models, '_models') and hasattr(models._models, '__len__'):
-                model_count = len(models._models)
-            elif hasattr(models, 'models') and hasattr(models.models, '__len__'):
-                model_count = len(models.models)
-            else:
-                # Count non-private attributes as fallback
-                attrs = [attr for attr in dir(models) if not attr.startswith('_') and not callable(getattr(models, attr, None))]
-                model_count = len(attrs)
+            model_list = models.list_models()
+            model_count = len(model_list)
         except Exception:
-            model_count = "unknown"
+            model_count = 0
             
     except ImportError as e:
         ecologits_status = f"unavailable: {e}"

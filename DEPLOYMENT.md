@@ -1,13 +1,15 @@
 # 🚀 Deployment Guide
 
-## Render Deployment
+This service is designed for easy deployment on cloud platforms. All configurations are simplified and production-ready.
+
+## Render Deployment (Recommended)
 
 ### Quick Deploy
 1. **Connect GitHub Repository**
    - Go to [Render Dashboard](https://dashboard.render.com)
    - Click "New +" → "Web Service"
    - Connect your GitHub account
-   - Select `lietwin/ecolegit` repository
+   - Select your forked `ecolegit` repository
 
 2. **Configure Service**
    ```
@@ -40,7 +42,7 @@ The repository includes `render.yaml` for Infrastructure as Code deployment:
 #### Basic Setup
 - **Environment**: Python 3.11
 - **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `python main_refactored.py`
+- **Start Command**: `python main.py`
 - **Health Check Path**: `/health`
 
 #### Environment Variables
@@ -79,7 +81,7 @@ docker push your-registry/ecolegits-webhook
 ### Heroku
 1. **Create Procfile**
    ```
-   web: python main_refactored.py
+   web: python main.py
    ```
 
 2. **Deploy**
@@ -177,7 +179,7 @@ Set `ENVIRONMENT=development` for detailed logs:
 ```bash
 # Local debugging
 export ENVIRONMENT=development
-python main_refactored.py
+python main.py
 ```
 
 ## Performance Optimization

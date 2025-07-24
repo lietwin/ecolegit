@@ -13,98 +13,87 @@ from ..domain.services import (
     ModelInfoService,
     TestService
 )
-from ..domain.model_discovery import ModelDiscoveryService
-from ..infrastructure.security import SecurityManager, SecurityFactory
+from ..infrastructure.security import SecurityManager, create_security_manager
 from ..infrastructure.ecologits_adapter import EcologitsAdapter
 
 logger = logging.getLogger(__name__)
 
 
-# Global dependency instances (initialized by application factory)
-_app_config: AppConfig = None
-_security_manager: SecurityManager = None
-_ecologits_adapter: EcologitsAdapter = None
-_services: dict = {}
+class DependencyContainer:
+    """Dependency injection container."""
+    
+    def __init__(self, config: AppConfig):
+        self.config = config
+        self.security_manager = create_security_manager(config)
+        self.ecologits_adapter = EcologitsAdapter()
+        
+        # Initialize services
+        self.impact_service = ImpactCalculationService(self.ecologits_adapter, config)
+        self.calculation_id_service = CalculationIdService()
+        self.health_service = HealthService()
+        self.model_info_service = ModelInfoService(self.ecologits_adapter, config)
+        self.test_service = TestService(self.impact_service)
+        
+        logger.info("Dependencies initialized successfully")
+
+
+# Container instance (initialized by application factory)
+_container: DependencyContainer = None
 
 
 def initialize_dependencies(config: AppConfig) -> None:
-    """Initialize global dependencies."""
-    global _app_config, _security_manager, _ecologits_adapter, _services
-    
-    _app_config = config
-    _security_manager = SecurityFactory.create_security_manager(config)
-    _ecologits_adapter = EcologitsAdapter()
-    
-    # Initialize services
-    model_discovery_service = ModelDiscoveryService(_ecologits_adapter)
-    impact_service = ImpactCalculationService(_ecologits_adapter, config, model_discovery_service)
-    
-    _services = {
-        'impact_calculation': impact_service,
-        'calculation_id': CalculationIdService(),
-        'health': HealthService(),
-        'model_info': ModelInfoService(_ecologits_adapter, config),
-        'test': TestService(impact_service),
-        'model_discovery': model_discovery_service
-    }
-    
-    logger.info("Dependencies initialized successfully")
+    """Initialize dependency container."""
+    global _container
+    _container = DependencyContainer(config)
 
 
 def get_app_config() -> AppConfig:
     """Get application configuration."""
-    if _app_config is None:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _app_config
+    return _container.config
 
 
 def get_security_manager() -> SecurityManager:
     """Get security manager."""
-    if _security_manager is None:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _security_manager
+    return _container.security_manager
 
 
 def get_impact_calculation_service() -> ImpactCalculationService:
     """Get impact calculation service."""
-    if 'impact_calculation' not in _services:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _services['impact_calculation']
+    return _container.impact_service
 
 
 def get_calculation_id_service() -> CalculationIdService:
     """Get calculation ID service."""
-    if 'calculation_id' not in _services:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _services['calculation_id']
+    return _container.calculation_id_service
 
 
 def get_health_service() -> HealthService:
     """Get health service."""
-    if 'health' not in _services:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _services['health']
+    return _container.health_service
 
 
 def get_model_info_service() -> ModelInfoService:
     """Get model info service."""
-    if 'model_info' not in _services:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _services['model_info']
+    return _container.model_info_service
 
 
 def get_test_service() -> TestService:
     """Get test service."""
-    if 'test' not in _services:
+    if _container is None:
         raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _services['test']
-
-
-def get_model_discovery_service() -> ModelDiscoveryService:
-    """Get model discovery service."""
-    if 'model_discovery' not in _services:
-        raise RuntimeError("Dependencies not initialized. Call initialize_dependencies() first.")
-    return _services['model_discovery']
+    return _container.test_service
 
 
 # FastAPI security dependency
@@ -127,5 +116,4 @@ CalculationIdServiceDep = Annotated[CalculationIdService, Depends(get_calculatio
 HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
 ModelInfoServiceDep = Annotated[ModelInfoService, Depends(get_model_info_service)]
 TestServiceDep = Annotated[TestService, Depends(get_test_service)]
-ModelDiscoveryServiceDep = Annotated[ModelDiscoveryService, Depends(get_model_discovery_service)]
 AuthenticatedDep = Annotated[bool, Depends(verify_authentication)]
