@@ -80,30 +80,69 @@ class ErrorMessages:
 
 
 class ModelMappings:
-    """Default model mappings from versioned model names to EcoLogits model names."""
+    """Model mappings from user-friendly names to EcoLogits model names.
+    
+    Uses 'latest' versions where available for automatic updates,
+    falls back to specific versions for stability.
+    """
     DEFAULT_MAPPINGS = {
-        # OpenAI models - map versioned names to simple names EcoLogits expects
-        "gpt-4o-2024-05-13": "gpt-4o",
-        "gpt4o-2024-05-13": "gpt-4o",  # Handle both formats
-        "gpt-4o-mini-2024-07-18": "gpt-4o-mini",
-        "gpt4o-mini-2024-07-18": "gpt-4o-mini",
-        "gpt-3.5-turbo-0125": "gpt-3.5-turbo",
-        "gpt-4-0613": "gpt-4",
-        # Anthropic models
-        "claude-3-opus-20240229": "claude-3-opus",
-        "claude-3-sonnet-20240229": "claude-3-sonnet", 
-        "claude-3-haiku-20240307": "claude-3-haiku",
-        "claude-3-5-sonnet-20240620": "claude-3-5-sonnet",
-        # Google models
-        "gemini-1.0-pro": "gemini-pro",
-        "gemini-1.5-pro-001": "gemini-1.5-pro",
-        # Also support direct simple names (pass-through) and common variations
+        # OpenAI models - EcoLogits supports these directly
         "gpt-4o": "gpt-4o",
-        "gpt4o": "gpt-4o",  # Common user input without hyphens
-        "gpt-4o-mini": "gpt-4o-mini",
-        "gpt4o-mini": "gpt-4o-mini",
+        "gpt4o": "gpt-4o",  # Typo correction
+        "gpt-4o-mini": "gpt-4o-mini", 
+        "gpt4o-mini": "gpt-4o-mini",  # Typo correction
+        "gpt-4omini": "gpt-4o-mini",  # Typo correction  
+        "gpt4omini": "gpt-4o-mini",   # Typo correction
         "gpt-3.5-turbo": "gpt-3.5-turbo",
-        "gpt-4": "gpt-4"
+        "gpt35turbo": "gpt-3.5-turbo",   # Typo correction
+        "gpt3.5turbo": "gpt-3.5-turbo", # Typo correction
+        "gpt-4": "gpt-4",
+        "gpt4": "gpt-4",  # Typo correction
+        
+        # Anthropic models - prefer latest versions for auto-updates
+        "claude-3-opus": "claude-3-opus-latest",
+        "claude3opus": "claude-3-opus-latest",    # Typo correction
+        "claudeopus": "claude-3-opus-latest",     # Typo correction
+        "claude-3-sonnet": "claude-3-5-sonnet-latest",  # Use 3.5 as it's newer
+        "claude3sonnet": "claude-3-5-sonnet-latest",     # Typo correction
+        "claudesonnet": "claude-3-5-sonnet-latest",      # Typo correction  
+        "claude-3-5-sonnet": "claude-3-5-sonnet-latest",
+        "claude35sonnet": "claude-3-5-sonnet-latest",    # Typo correction
+        "claude-35-sonnet": "claude-3-5-sonnet-latest",  # Typo correction
+        "claude-3-haiku": "claude-3-5-haiku-latest",     # Use 3.5 as it's newer
+        "claude3haiku": "claude-3-5-haiku-latest",       # Typo correction
+        "claudehaiku": "claude-3-5-haiku-latest",        # Typo correction
+        "claude-3-5-haiku": "claude-3-5-haiku-latest",
+        
+        # Google models - use latest Gemini 2.0/2.5 models that EcoLogits supports
+        "gemini-pro": "gemini-2.5-pro",         # Use latest 2.5 pro
+        "geminipro": "gemini-2.5-pro",          # Typo correction
+        "gemini-1.5-pro": "gemini-2.5-pro",     # Upgrade to 2.5
+        "gemini15pro": "gemini-2.5-pro",        # Typo correction
+        "gemini-15-pro": "gemini-2.5-pro",      # Typo correction
+        "gemini-flash": "gemini-2.5-flash",     # Use latest 2.5 flash
+        "geminiflash": "gemini-2.5-flash",      # Typo correction
+        "gemini-2.0-flash": "gemini-2.5-flash", # Upgrade to 2.5
+        "gemini-2.5-flash": "gemini-2.5-flash", # Latest flash model
+        "gemini-2.5-pro": "gemini-2.5-pro",     # Latest pro model
+        
+        # Support exact EcoLogits names as pass-through
+        "claude-3-opus-latest": "claude-3-opus-latest",
+        "claude-3-5-sonnet-latest": "claude-3-5-sonnet-latest", 
+        "claude-3-5-haiku-latest": "claude-3-5-haiku-latest",
+        "chatgpt-4o-latest": "chatgpt-4o-latest",
+        
+        # Support legacy versioned names for backward compatibility
+        "claude-3-opus-20240229": "claude-3-opus-20240229",
+        "claude-3-sonnet-20240229": "claude-3-sonnet-20240229",
+        "claude-3-haiku-20240307": "claude-3-haiku-20240307", 
+        "claude-3-5-sonnet-20240620": "claude-3-5-sonnet-20240620",
+        "gpt-4o-2024-05-13": "gpt-4o",
+        "gpt-4o-mini-2024-07-18": "gpt-4o-mini",
+        "gpt-3.5-turbo-0125": "gpt-3.5-turbo",
+        # Legacy Google model names - upgrade to latest
+        "gemini-1.0-pro": "gemini-2.5-pro",
+        "gemini-1.5-pro-001": "gemini-2.5-pro"
     }
 
 

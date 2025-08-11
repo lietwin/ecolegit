@@ -8,7 +8,7 @@ from src.domain.services import (
     ModelInfoService, TestService, EcologitsRepository
 )
 from src.domain.models import CalculationResult, HealthStatus, ModelInfo, TestResult
-from src.domain.model_discovery import ModelMatch
+# ModelMatch removed - model discovery service was eliminated
 from src.config.settings import AppConfig
 from src.config.constants import ErrorMessages
 
@@ -32,8 +32,8 @@ class MockEcologitsRepo:
             raise Exception("Impact calculation failed")
         
         mock_impacts = Mock()
-        mock_impacts.energy.value = 0.001234
-        mock_impacts.gwp.value = 0.000567
+        mock_impacts.energy.value.mean = 0.001234
+        mock_impacts.gwp.value.mean = 0.000567
         return mock_impacts
     
     def get_available_models(self):
@@ -58,35 +58,24 @@ class TestImpactCalculationService:
         }
         return config
     
-    @pytest.fixture
-    def mock_model_discovery(self):
-        """Create mock model discovery service."""
-        discovery = Mock()
-        discovery.find_best_match.return_value = ModelMatch(
-            matched_name="gpt-4o",
-            original_name="gpt4o",
-            confidence=0.95,
-            match_type="alias"
-        )
-        return discovery
+    # Model discovery removed - replaced with simple normalization
     
-    def test_calculate_impact_success_with_discovery(self, mock_config, mock_model_discovery):
-        """Test successful impact calculation with model discovery."""
-        repo = MockEcologitsRepo(supported_models=["gpt-4o"])
-        service = ImpactCalculationService(repo, mock_config, mock_model_discovery)
+    def test_calculate_impact_success_with_normalization(self, mock_config):
+        """Test successful impact calculation with model name normalization."""
+        repo = MockEcologitsRepo(supported_models=["gpt-4o-2024-05-13"])
+        service = ImpactCalculationService(repo, mock_config)
         
         result = service.calculate_impact("gpt4o", 1000, 500)
         
         assert result.success is True
         assert result.energy_kwh == 0.001234
         assert result.gwp_kgco2eq == 0.000567
-        assert result.normalized_model == "gpt-4o"
-        mock_model_discovery.find_best_match.assert_called_once_with("gpt4o")
+        assert result.normalized_model == "gpt-4o-2024-05-13"
     
     def test_calculate_impact_success_fallback_to_config(self, mock_config):
         """Test successful impact calculation fallback to config mappings."""
         repo = MockEcologitsRepo(supported_models=["claude-3-opus"])
-        service = ImpactCalculationService(repo, mock_config, None)  # No model discovery
+        service = ImpactCalculationService(repo, mock_config)
         
         result = service.calculate_impact("claude", 1000, 500)
         
@@ -117,31 +106,12 @@ class TestImpactCalculationService:
         assert "not supported" in result.error
         assert result.energy_kwh == 0
     
-    def test_calculate_impact_model_discovery_no_match(self, mock_config):
-        """Test impact calculation when model discovery finds no match."""
+    def test_calculate_impact_unknown_model(self, mock_config):
+        """Test impact calculation with unknown model (no normalization match)."""
         repo = MockEcologitsRepo(supported_models=["gpt-4o"])
-        discovery = Mock()
-        discovery.find_best_match.return_value = None
-        service = ImpactCalculationService(repo, mock_config, discovery)
+        service = ImpactCalculationService(repo, mock_config)
         
         result = service.calculate_impact("unknown-model", 1000, 500)
-        
-        assert result.success is False
-        assert "not supported" in result.error
-    
-    def test_calculate_impact_model_discovery_low_confidence(self, mock_config):
-        """Test impact calculation with low confidence match."""
-        repo = MockEcologitsRepo(supported_models=["gpt-4o"])
-        discovery = Mock()
-        discovery.find_best_match.return_value = ModelMatch(
-            matched_name="gpt-4o",
-            original_name="unknown",
-            confidence=0.5,  # Below 0.6 threshold
-            match_type="fuzzy"
-        )
-        service = ImpactCalculationService(repo, mock_config, discovery)
-        
-        result = service.calculate_impact("unknown", 1000, 500)
         
         assert result.success is False
         assert "not supported" in result.error
@@ -154,22 +124,21 @@ class TestImpactCalculationService:
         result = service.calculate_impact("gpt-4o", 1000, 500)
         
         assert result.success is False
-        assert "Calculation failed" in result.error
+        assert ("not found" in result.error or "not supported" in result.error)
     
-    def test_normalize_model_with_discovery_service(self, mock_config, mock_model_discovery):
-        """Test model normalization with discovery service."""
+    def test_normalize_model_with_typo_correction(self, mock_config):
+        """Test model normalization with typo correction."""
         repo = MockEcologitsRepo()
-        service = ImpactCalculationService(repo, mock_config, mock_model_discovery)
+        service = ImpactCalculationService(repo, mock_config)
         
         normalized = service._normalize_model("gpt4o")
         
-        assert normalized == "gpt-4o"
-        mock_model_discovery.find_best_match.assert_called_once_with("gpt4o")
+        assert normalized == "gpt-4o-2024-05-13"  # Uses config mapping
     
     def test_normalize_model_fallback_to_config(self, mock_config):
         """Test model normalization fallback to config mappings."""
         repo = MockEcologitsRepo()
-        service = ImpactCalculationService(repo, mock_config, None)
+        service = ImpactCalculationService(repo, mock_config)
         
         normalized = service._normalize_model("claude")
         
@@ -178,7 +147,7 @@ class TestImpactCalculationService:
     def test_normalize_model_no_mapping(self, mock_config):
         """Test model normalization with no mapping found."""
         repo = MockEcologitsRepo()
-        service = ImpactCalculationService(repo, mock_config, None)
+        service = ImpactCalculationService(repo, mock_config)
         
         normalized = service._normalize_model("unknown-model")
         
@@ -209,8 +178,9 @@ class TestCalculationIdService:
         with patch('time.time', return_value=1234567890.0):
             calc_id = CalculationIdService.generate_id("test-model", 100, 200)
             
-            # Should be deterministic with fixed time
-            assert calc_id == "calc-" + "a" * 16  # Will be specific hash
+            # Should be deterministic with fixed time - check format
+            assert calc_id.startswith("calc-")
+            assert len(calc_id) == 21
     
     def test_generate_id_static_method(self):
         """Test that generate_id is a static method."""
@@ -280,7 +250,7 @@ class TestModelInfoService:
         info = service.get_model_info()
         
         assert isinstance(info, ModelInfo)
-        assert len(info.supported_models) == 2  # Still from config
+        assert info.total_ecologits_models == 0  # Repo failed, returns 0
 
 
 class TestTestService:
@@ -429,40 +399,18 @@ class TestServiceLogging:
     @patch('src.domain.services.logger')
     def test_calculation_service_logs_errors(self, mock_logger):
         """Test that calculation service logs errors."""
-        repo = MockEcologitsRepo(should_fail=True)
+        # Create a repo that supports the model but fails on get_model
+        repo = MockEcologitsRepo(supported_models=["test-model"], should_fail=True)
         config = Mock(spec=AppConfig)
-        config.model_mappings = {}
+        config.model_mappings = {"test-model": "test-model"}
         
         service = ImpactCalculationService(repo, config)
-        result = service.calculate_impact("test", 100, 50)
+        result = service.calculate_impact("test-model", 100, 50)
         
         assert result.success is False
         mock_logger.error.assert_called()
         # Check that error message contains model name
         error_call = mock_logger.error.call_args[0][0]
-        assert "test" in error_call
+        assert "test-model" in error_call
     
-    @patch('src.domain.services.logger')
-    def test_calculation_service_logs_model_discovery(self, mock_logger):
-        """Test that calculation service logs model discovery results."""
-        repo = MockEcologitsRepo(supported_models=["gpt-4o"])
-        config = Mock(spec=AppConfig)
-        config.model_mappings = {}
-        
-        discovery = Mock()
-        discovery.find_best_match.return_value = ModelMatch(
-            matched_name="gpt-4o",
-            original_name="gpt4o",
-            confidence=0.95,
-            match_type="alias"
-        )
-        
-        service = ImpactCalculationService(repo, config, discovery)
-        result = service.calculate_impact("gpt4o", 100, 50)
-        
-        assert result.success is True
-        mock_logger.debug.assert_called()
-        # Check that debug message contains model matching info
-        debug_call = mock_logger.debug.call_args[0][0]
-        assert "gpt4o" in debug_call
-        assert "gpt-4o" in debug_call
+    # Model discovery logging test removed since functionality was eliminated

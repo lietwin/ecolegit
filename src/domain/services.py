@@ -133,11 +133,16 @@ class ModelInfoService:
 
     def get_model_info(self) -> ModelInfo:
         """Get supported model information."""
-        available_models = self._ecologits_repo.get_available_models()
+        try:
+            available_models = self._ecologits_repo.get_available_models()
+            total_models = len(available_models)
+        except Exception as e:
+            logger.error(f"Failed to get available models from repository: {e}")
+            total_models = 0
         
         return ModelInfo(
             supported_models=list(self._config.model_mappings.keys()),
-            total_ecologits_models=len(available_models)
+            total_ecologits_models=total_models
         )
 
 

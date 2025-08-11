@@ -40,8 +40,8 @@ def mock_ecologits_repo():
     
     # Mock impacts object
     mock_impacts = MagicMock()
-    mock_impacts.energy.value = 0.001234
-    mock_impacts.gwp.value = 0.000567
+    mock_impacts.energy.value.mean = 0.001234
+    mock_impacts.gwp.value.mean = 0.000567
     
     # Mock model
     mock_model = MagicMock()
@@ -50,10 +50,19 @@ def mock_ecologits_repo():
     repo.get_model.return_value = mock_model
     repo.calculate_impacts.return_value = mock_impacts
     repo.get_available_models.return_value = {
+        'gpt-4o': mock_model,
+        'gpt-4o-mini': mock_model,
+        'claude-3-opus': mock_model,
+        'claude-3-sonnet': mock_model,
+        'claude-3-haiku': mock_model,
+        'claude-3-5-sonnet': mock_model,
+        'gemini-pro': mock_model,
+        'gemini-1.5-pro': mock_model,
         'gpt-4o-2024-05-13': mock_model,
         'test-model-v1': mock_model
     }
-# repo.is_model_supported.return_value = True  # Not needed for basic tests
+    # Make the mock permissive for model support
+    repo.is_model_supported.return_value = True
     
     return repo
 

@@ -12,10 +12,7 @@ class TestEcologitsAdapterInitialization:
     @patch('src.infrastructure.ecologits_adapter.models')
     def test_init_success(self, mock_models):
         """Test successful initialization."""
-        mock_models.some_model = Mock()
-        
         adapter = EcologitsAdapter()
-        
         assert adapter._models == mock_models
     
     @patch('src.infrastructure.ecologits_adapter.ECOLOGITS_AVAILABLE', False)
@@ -35,98 +32,36 @@ class TestEcologitsAdapterGetModel:
             self.mock_models = mock_models
             self.adapter = EcologitsAdapter()
     
-    def test_get_model_with_get_method(self):
-        """Test getting model when models has get method."""
+    @patch('src.domain.model_utils.detect_provider')
+    def test_get_model_success(self, mock_detect_provider):
+        """Test successful model retrieval."""
         mock_model = Mock()
-        self.mock_models.get.return_value = mock_model
+        mock_model.name = "gpt-4o"
+        mock_model.provider.value = "openai"
+        
+        mock_detect_provider.return_value = "openai"
+        self.mock_models.find_model.return_value = mock_model
         
         result = self.adapter.get_model("gpt-4o")
         
         assert result == mock_model
-        self.mock_models.get.assert_called_once_with("gpt-4o")
+        mock_detect_provider.assert_called_once_with("gpt-4o")
+        self.mock_models.find_model.assert_called_once_with("openai", "gpt-4o")
     
-    def test_get_model_with_attribute_access(self):
-        """Test getting model via attribute access."""
-        mock_model = Mock()
-        
-        # Mock hasattr and getattr
-        def mock_hasattr(obj, attr):
-            if attr == 'get':
-                return False
-            elif attr == 'gpt-4o':
-                return True
-            return False
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr == 'gpt-4o':
-                return mock_model
-            return default
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.get_model("gpt-4o")
-            
-            assert result == mock_model
-    
-    def test_get_model_with_internal_models_dict(self):
-        """Test getting model from internal _models dict."""
-        mock_model = Mock()
-        
-        def mock_hasattr(obj, attr):
-            if attr in ['get', 'gpt-4o']:
-                return False
-            elif attr == '_models':
-                return True
-            return False
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr == '_models':
-                return {'gpt-4o': mock_model}
-            return default
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.get_model("gpt-4o")
-            
-            assert result == mock_model
-    
-    def test_get_model_with_models_attribute(self):
-        """Test getting model from models attribute."""
-        mock_model = Mock()
-        
-        def mock_hasattr(obj, attr):
-            if attr in ['get', 'gpt-4o', '_models']:
-                return False
-            elif attr == 'models':
-                return True
-            return False
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr == 'models':
-                return {'gpt-4o': mock_model}
-            return default
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.get_model("gpt-4o")
-            
-            assert result == mock_model
-    
-    def test_get_model_not_found(self):
+    @patch('src.domain.model_utils.detect_provider')
+    def test_get_model_not_found(self, mock_detect_provider):
         """Test getting model that doesn't exist."""
-        def mock_hasattr(obj, attr):
-            return False
+        mock_detect_provider.return_value = "openai"
+        self.mock_models.find_model.return_value = None
         
-        with patch('builtins.hasattr', side_effect=mock_hasattr):
-            with pytest.raises(EcologitsServiceError, match="Model 'unknown-model' not found"):
-                self.adapter.get_model("unknown-model")
+        with pytest.raises(EcologitsServiceError, match="Failed to get model 'unknown-model'"):
+            self.adapter.get_model("unknown-model")
     
-    def test_get_model_exception_handling(self):
+    @patch('src.domain.model_utils.detect_provider')
+    def test_get_model_exception_handling(self, mock_detect_provider):
         """Test exception handling in get_model."""
-        self.mock_models.get.side_effect = Exception("Unexpected error")
+        mock_detect_provider.return_value = "openai"
+        self.mock_models.find_model.side_effect = Exception("Unexpected error")
         
         with pytest.raises(EcologitsServiceError, match="Failed to get model 'gpt-4o'"):
             self.adapter.get_model("gpt-4o")
@@ -141,30 +76,35 @@ class TestEcologitsAdapterCalculateImpacts:
              patch('src.infrastructure.ecologits_adapter.models'):
             self.adapter = EcologitsAdapter()
     
-    @patch('src.infrastructure.ecologits_adapter.Impacts')
-    def test_calculate_impacts_success(self, mock_impacts_class):
+    @patch('ecologits.tracers.utils.llm_impacts')
+    def test_calculate_impacts_success(self, mock_llm_impacts):
         """Test successful impact calculation."""
         mock_model = Mock()
+        mock_model.provider.value = "openai"
+        mock_model.name = "gpt-4o"
+        
         mock_impacts = Mock()
         mock_impacts.energy.value = 0.001234
         mock_impacts.gwp.value = 0.000567
-        
-        mock_impacts_class.from_model_and_tokens.return_value = mock_impacts
+        mock_llm_impacts.return_value = mock_impacts
         
         result = self.adapter.calculate_impacts(mock_model, 1000, 500)
         
         assert result == mock_impacts
-        mock_impacts_class.from_model_and_tokens.assert_called_once_with(
-            model=mock_model,
-            input_tokens=1000,
-            output_tokens=500
+        mock_llm_impacts.assert_called_once_with(
+            provider="openai",
+            model_name="gpt-4o",
+            output_token_count=500,
+            request_latency=1.0
         )
     
-    @patch('src.infrastructure.ecologits_adapter.Impacts')
-    def test_calculate_impacts_exception(self, mock_impacts_class):
+    @patch('ecologits.tracers.utils.llm_impacts')
+    def test_calculate_impacts_exception(self, mock_llm_impacts):
         """Test exception handling in calculate_impacts."""
         mock_model = Mock()
-        mock_impacts_class.from_model_and_tokens.side_effect = Exception("Calculation failed")
+        mock_model.provider.value = "openai"
+        mock_model.name = "gpt-4o"
+        mock_llm_impacts.side_effect = Exception("Calculation failed")
         
         with pytest.raises(EcologitsServiceError, match="Failed to calculate environmental impacts"):
             self.adapter.calculate_impacts(mock_model, 1000, 500)
@@ -180,99 +120,32 @@ class TestEcologitsAdapterGetAvailableModels:
             self.mock_models = mock_models
             self.adapter = EcologitsAdapter()
     
-    def test_get_available_models_with_private_models(self):
-        """Test getting models from _models attribute."""
-        mock_models_dict = {
-            'gpt-4o': Mock(),
-            'claude-3-opus': Mock()
+    def test_get_available_models_success(self):
+        """Test successful model listing."""
+        mock_model1 = Mock()
+        mock_model1.name = "gpt-4o"
+        mock_model2 = Mock()
+        mock_model2.name = "claude-3-opus"
+        
+        mock_model_list = [mock_model1, mock_model2]
+        self.mock_models.list_models.return_value = mock_model_list
+        
+        result = self.adapter.get_available_models()
+        
+        expected = {
+            "gpt-4o": mock_model1,
+            "claude-3-opus": mock_model2
         }
-        
-        def mock_hasattr(obj, attr):
-            if attr == '_models':
-                return True
-            return False
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr == '_models':
-                mock_obj = Mock()
-                mock_obj.items.return_value = mock_models_dict.items()
-                return mock_obj
-            return default
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.get_available_models()
-            
-            assert result == mock_models_dict
-    
-    def test_get_available_models_with_models_attribute(self):
-        """Test getting models from models attribute."""
-        mock_models_dict = {
-            'gpt-4o': Mock(),
-            'claude-3-opus': Mock()
-        }
-        
-        def mock_hasattr(obj, attr):
-            if attr == '_models':
-                return False
-            elif attr == 'models':
-                return True
-            return False
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr == 'models':
-                mock_obj = Mock()
-                mock_obj.items.return_value = mock_models_dict.items()
-                return mock_obj
-            return default
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.get_available_models()
-            
-            assert result == mock_models_dict
-    
-    def test_get_available_models_via_dir(self):
-        """Test getting models via directory inspection."""
-        mock_model = Mock()
-        
-        def mock_hasattr(obj, attr):
-            return False
-        
-        def mock_dir(obj):
-            return ['gpt_4o', 'claude_3_opus', '_private_attr', '__dunder__', 'some_method']
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr in ['gpt_4o', 'claude_3_opus']:
-                return mock_model
-            elif attr == 'some_method':
-                return lambda: None  # Callable
-            return default
-        
-        def mock_callable(obj):
-            return hasattr(obj, '__call__')
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.dir', side_effect=mock_dir), \
-             patch('builtins.getattr', side_effect=mock_getattr), \
-             patch('builtins.callable', side_effect=mock_callable):
-            
-            result = self.adapter.get_available_models()
-            
-            expected = {'gpt_4o': mock_model, 'claude_3_opus': mock_model}
-            assert result == expected
+        assert result == expected
+        self.mock_models.list_models.assert_called_once()
     
     def test_get_available_models_exception(self):
         """Test exception handling in get_available_models."""
-        def mock_hasattr(obj, attr):
-            raise Exception("Unexpected error")
+        self.mock_models.list_models.side_effect = Exception("API error")
         
-        with patch('builtins.hasattr', side_effect=mock_hasattr):
-            result = self.adapter.get_available_models()
-            
-            assert result == {}
+        result = self.adapter.get_available_models()
+        
+        assert result == {}
 
 
 class TestEcologitsAdapterIsModelSupported:
@@ -285,91 +158,37 @@ class TestEcologitsAdapterIsModelSupported:
             self.mock_models = mock_models
             self.adapter = EcologitsAdapter()
     
-    def test_is_model_supported_via_hasattr(self):
-        """Test model support check via hasattr."""
-        def mock_hasattr(obj, attr):
-            return attr == 'gpt-4o'
+    @patch('src.domain.model_utils.detect_provider')
+    def test_is_model_supported_true(self, mock_detect_provider):
+        """Test model support check returns True."""
+        mock_model = Mock()
+        mock_detect_provider.return_value = "openai"
+        self.mock_models.find_model.return_value = mock_model
         
-        def mock_getattr(obj, attr, default=None):
-            if attr == 'gpt-4o':
-                return Mock()  # Non-None value
-            return default
+        result = self.adapter.is_model_supported('gpt-4o')
         
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            assert self.adapter.is_model_supported('gpt-4o') is True
-            assert self.adapter.is_model_supported('unknown-model') is False
+        assert result is True
+        mock_detect_provider.assert_called_once_with('gpt-4o')
+        self.mock_models.find_model.assert_called_once_with('openai', 'gpt-4o')
     
-    def test_is_model_supported_via_private_models(self):
-        """Test model support check via _models.__contains__."""
-        def mock_hasattr(obj, attr):
-            if attr == 'gpt-4o':
-                return False
-            elif attr == '_models':
-                return True
-            elif attr == '__contains__':
-                return True
-            return False
+    @patch('src.domain.model_utils.detect_provider')
+    def test_is_model_supported_false(self, mock_detect_provider):
+        """Test model support check returns False."""
+        mock_detect_provider.return_value = "openai"
+        self.mock_models.find_model.return_value = None
         
-        def mock_getattr(obj, attr, default=None):
-            if attr == '_models':
-                mock_obj = Mock()
-                mock_obj.__contains__ = Mock(return_value=True)
-                return mock_obj
-            return default
+        result = self.adapter.is_model_supported('unknown-model')
         
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.is_model_supported('gpt-4o')
-            
-            assert result is True
+        assert result is False
     
-    def test_is_model_supported_via_models_attribute(self):
-        """Test model support check via models.__contains__."""
-        def mock_hasattr(obj, attr):
-            if attr in ['gpt-4o', '_models']:
-                return False
-            elif attr == 'models':
-                return True
-            elif attr == '__contains__':
-                return True
-            return False
-        
-        def mock_getattr(obj, attr, default=None):
-            if attr == 'models':
-                mock_obj = Mock()
-                mock_obj.__contains__ = Mock(return_value=True)
-                return mock_obj
-            return default
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr), \
-             patch('builtins.getattr', side_effect=mock_getattr):
-            
-            result = self.adapter.is_model_supported('gpt-4o')
-            
-            assert result is True
-    
-    def test_is_model_supported_fallback(self):
-        """Test model support fallback when no method works."""
-        def mock_hasattr(obj, attr):
-            return False
-        
-        with patch('builtins.hasattr', side_effect=mock_hasattr):
-            result = self.adapter.is_model_supported('gpt-4o')
-            
-            assert result is False
-    
-    def test_is_model_supported_exception(self):
+    @patch('src.domain.model_utils.detect_provider')
+    def test_is_model_supported_exception(self, mock_detect_provider):
         """Test exception handling in is_model_supported."""
-        def mock_hasattr(obj, attr):
-            raise Exception("Unexpected error")
+        mock_detect_provider.side_effect = Exception("Provider detection failed")
         
-        with patch('builtins.hasattr', side_effect=mock_hasattr):
-            result = self.adapter.is_model_supported('gpt-4o')
-            
-            assert result is False
+        result = self.adapter.is_model_supported('gpt-4o')
+        
+        assert result is False
 
 
 class TestEcologitsServiceError:
@@ -390,28 +209,31 @@ class TestEcologitsServiceError:
 class TestEcologitsAdapterIntegration:
     """Integration tests for EcoLogits adapter."""
     
-    def test_full_workflow_success(self):
+    @patch('src.domain.model_utils.detect_provider')
+    @patch('ecologits.tracers.utils.llm_impacts')
+    def test_full_workflow_success(self, mock_llm_impacts, mock_detect_provider):
         """Test full workflow from model discovery to calculation."""
         with patch('src.infrastructure.ecologits_adapter.ECOLOGITS_AVAILABLE', True), \
-             patch('src.infrastructure.ecologits_adapter.models') as mock_models, \
-             patch('src.infrastructure.ecologits_adapter.Impacts') as mock_impacts_class:
+             patch('src.infrastructure.ecologits_adapter.models') as mock_models:
             
             # Setup mocks
             mock_model = Mock()
-            mock_models.get.return_value = mock_model
+            mock_model.name = "gpt-4o"
+            mock_model.provider.value = "openai"
+            
+            mock_detect_provider.return_value = "openai"
+            mock_models.find_model.return_value = mock_model
             
             mock_impacts = Mock()
             mock_impacts.energy.value = 0.001234
             mock_impacts.gwp.value = 0.000567
-            mock_impacts_class.from_model_and_tokens.return_value = mock_impacts
+            mock_llm_impacts.return_value = mock_impacts
             
             # Create adapter
             adapter = EcologitsAdapter()
             
             # Test model support
-            adapter._models = mock_models
-            with patch.object(adapter, 'is_model_supported', return_value=True):
-                assert adapter.is_model_supported('gpt-4o') is True
+            assert adapter.is_model_supported('gpt-4o') is True
             
             # Test model retrieval
             model = adapter.get_model('gpt-4o')
@@ -421,13 +243,15 @@ class TestEcologitsAdapterIntegration:
             impacts = adapter.calculate_impacts(model, 1000, 500)
             assert impacts == mock_impacts
     
-    def test_error_propagation_workflow(self):
+    @patch('src.domain.model_utils.detect_provider')
+    def test_error_propagation_workflow(self, mock_detect_provider):
         """Test error propagation through workflow."""
         with patch('src.infrastructure.ecologits_adapter.ECOLOGITS_AVAILABLE', True), \
              patch('src.infrastructure.ecologits_adapter.models') as mock_models:
             
             # Setup model to fail
-            mock_models.get.side_effect = Exception("Connection failed")
+            mock_detect_provider.return_value = "openai"
+            mock_models.find_model.side_effect = Exception("Connection failed")
             
             adapter = EcologitsAdapter()
             
@@ -450,12 +274,14 @@ class TestEcologitsAdapterLogging:
             mock_logger.info.assert_called_with("EcologitsAdapter initialized")
     
     @patch('src.infrastructure.ecologits_adapter.logger')
-    def test_error_logging_in_get_model(self, mock_logger):
+    @patch('src.domain.model_utils.detect_provider')
+    def test_error_logging_in_get_model(self, mock_detect_provider, mock_logger):
         """Test error logging in get_model."""
         with patch('src.infrastructure.ecologits_adapter.ECOLOGITS_AVAILABLE', True), \
              patch('src.infrastructure.ecologits_adapter.models') as mock_models:
             
-            mock_models.get.side_effect = Exception("Test error")
+            mock_detect_provider.return_value = "openai"
+            mock_models.find_model.side_effect = Exception("Test error")
             adapter = EcologitsAdapter()
             
             with pytest.raises(EcologitsServiceError):
@@ -464,19 +290,21 @@ class TestEcologitsAdapterLogging:
             mock_logger.error.assert_called_with("Error getting model 'test-model': Test error")
     
     @patch('src.infrastructure.ecologits_adapter.logger')
-    def test_debug_logging_in_calculate_impacts(self, mock_logger):
+    @patch('ecologits.tracers.utils.llm_impacts')
+    def test_debug_logging_in_calculate_impacts(self, mock_llm_impacts, mock_logger):
         """Test debug logging in calculate_impacts."""
         with patch('src.infrastructure.ecologits_adapter.ECOLOGITS_AVAILABLE', True), \
-             patch('src.infrastructure.ecologits_adapter.models'), \
-             patch('src.infrastructure.ecologits_adapter.Impacts') as mock_impacts_class:
+             patch('src.infrastructure.ecologits_adapter.models'):
             
             mock_impacts = Mock()
             mock_impacts.energy.value = 0.001234
             mock_impacts.gwp.value = 0.000567
-            mock_impacts_class.from_model_and_tokens.return_value = mock_impacts
+            mock_llm_impacts.return_value = mock_impacts
             
             adapter = EcologitsAdapter()
             mock_model = Mock()
+            mock_model.provider.value = "openai"
+            mock_model.name = "gpt-4o"
             
             adapter.calculate_impacts(mock_model, 1000, 500)
             
