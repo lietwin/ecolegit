@@ -36,10 +36,9 @@ class EcologitsRepository(Protocol):
 class ImpactCalculationService:
     """Service for calculating environmental impact."""
 
-    def __init__(self, ecologits_repo: EcologitsRepository, config: AppConfig, model_discovery_service=None):
+    def __init__(self, ecologits_repo: EcologitsRepository, config: AppConfig):
         self._ecologits_repo = ecologits_repo
         self._config = config
-        self._model_discovery_service = model_discovery_service
 
     def calculate_impact(self, model: str, input_tokens: int, output_tokens: int) -> CalculationResult:
         """Calculate environmental impact with proper error handling."""
@@ -53,7 +52,10 @@ class ImpactCalculationService:
             
             # Check if model is supported
             if not self._ecologits_repo.is_model_supported(normalized_model):
-                error_msg = ErrorMessages.MODEL_NOT_SUPPORTED.format(model=normalized_model)
+                # Generate helpful error message with suggestions
+                available_models = list(self._config.model_mappings.keys())
+                from .model_normalizer import get_suggestion_message
+                error_msg = get_suggestion_message(model, available_models)
                 return CalculationResult.error_result(error_msg)
 
             # Get model and calculate impacts
@@ -80,20 +82,53 @@ class ImpactCalculationService:
             return CalculationResult.error_result(error_detail)
 
     def _normalize_model(self, model_name: str) -> str:
-        """Normalize model name using dynamic model discovery or fallback to config mappings."""
-        if self._model_discovery_service:
-            # Use dynamic model discovery
-            match = self._model_discovery_service.find_best_match(model_name)
-            if match and match.confidence >= 0.6:  # Accept matches with 60%+ confidence
-                logger.debug(f"Model '{model_name}' matched to '{match.matched_name}' via {match.match_type} (confidence: {match.confidence:.2f})")
-                return match.matched_name
-            else:
-                # No good match found
-                logger.warning(f"No suitable match found for model '{model_name}'")
-                return model_name
-        else:
-            # Fallback to static mappings (for backwards compatibility)
-            return self._config.model_mappings.get(model_name.lower(), model_name)
+        """Normalize model name using smart normalization and config mappings."""
+        from .model_normalizer import normalize_model_name
+        
+        # First try smart normalization for common typos
+        normalized = normalize_model_name(model_name)
+        
+        # Security: Validate the normalized model name to prevent bypasses
+        self._validate_model_name_security(normalized)
+        
+        # Then check config mappings (for both original and normalized names)
+        mapped = self._config.model_mappings.get(normalized.lower())
+        if mapped:
+            # Security: Also validate mapped model name
+            self._validate_model_name_security(mapped)
+            return mapped
+            
+        # Try original name in config as fallback
+        mapped_original = self._config.model_mappings.get(model_name.lower())
+        if mapped_original:
+            # Security: Also validate original mapped model name
+            self._validate_model_name_security(mapped_original)
+            return mapped_original
+            
+        return normalized
+
+    def _validate_model_name_security(self, model_name: str) -> None:
+        """Validate model name against security constraints.
+        
+        This ensures that normalized/mapped model names still pass security validation
+        to prevent potential bypasses of the original input validation.
+        """
+        # Check for empty/whitespace-only strings first
+        if not model_name.strip():
+            raise ValueError(f"Model name cannot be empty after normalization: {model_name}")
+        
+        # Additional security checks
+        if len(model_name) > 100:  # Same limit as Pydantic Field
+            raise ValueError(f"Model name too long: {model_name}")
+        
+        # Use the same validation logic as the Pydantic validator
+        # Only check if it has content after removing allowed special chars
+        clean_name = model_name.replace('-', '').replace('.', '').replace('_', '')
+        
+        # Ensure only ASCII alphanumeric characters (more restrictive than isalnum())
+        if not clean_name.isascii() or not clean_name.isalnum():
+            from ..config.constants import ErrorMessages
+            raise ValueError(f"{ErrorMessages.MODEL_NAME_INVALID_CHARS}: {model_name}")
 
 
 class CalculationIdService:
@@ -127,11 +162,16 @@ class ModelInfoService:
 
     def get_model_info(self) -> ModelInfo:
         """Get supported model information."""
-        available_models = self._ecologits_repo.get_available_models()
+        try:
+            available_models = self._ecologits_repo.get_available_models()
+            total_models = len(available_models)
+        except Exception as e:
+            logger.error(f"Failed to get available models from repository: {e}")
+            total_models = 0
         
         return ModelInfo(
             supported_models=list(self._config.model_mappings.keys()),
-            total_ecologits_models=len(available_models)
+            total_ecologits_models=total_models
         )
 
 

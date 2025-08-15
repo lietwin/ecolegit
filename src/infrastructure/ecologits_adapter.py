@@ -35,17 +35,8 @@ class EcologitsAdapter(EcologitsRepository):
     
     def _get_provider_from_model_name(self, model_name: str) -> str:
         """Detect provider from model name patterns."""
-        model_lower = model_name.lower()
-        
-        if model_lower.startswith("gpt-") or "gpt" in model_lower:
-            return "openai"
-        elif model_lower.startswith("claude-") or "claude" in model_lower:
-            return "anthropic"
-        elif model_lower.startswith("gemini-") or "gemini" in model_lower:
-            return "google"
-        else:
-            # Default fallback - try openai first as most common
-            return "openai"
+        from ..domain.model_utils import detect_provider
+        return detect_provider(model_name)
 
     def get_model(self, model_name: str) -> object:
         """Get model by name from ecologits repository."""

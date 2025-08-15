@@ -14,19 +14,23 @@ A production-ready FastAPI service for calculating environmental impact of AI mo
 - **Security**: API key authentication and HMAC webhook signature verification
 - **Rate Limiting**: Configurable request rate limiting
 - **Clean Architecture**: SOLID principles with dependency injection
-- **Comprehensive Testing**: 99% test coverage
+- **Comprehensive Testing**: High test coverage with focus on integration tests
 - **Production Ready**: Structured logging, error handling, and monitoring
 
 ## 🏗️ **Architecture**
 
+**Clean & Simple Architecture:**
+
 ```
 src/
-├── config/          # Configuration management
-├── domain/          # Business logic and models
-├── infrastructure/  # External services and security
-├── api/            # FastAPI routes and middleware
-└── application.py   # Application factory
+├── api/             # FastAPI routes, middleware, dependencies
+├── domain/          # Business logic and models (no external deps)
+├── infrastructure/  # External integrations (EcoLogits, security)
+├── config/          # Configuration and constants
+└── application.py   # Application factory functions
 ```
+
+**Dependencies Flow:** API → Domain ← Infrastructure
 
 ## 🚀 **Quick Start**
 
@@ -38,18 +42,21 @@ src/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd ecolegit
    ```
 
 2. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    pip install -r requirements-test.txt  # For development
    ```
 
 3. **Run the application**
+
    ```bash
    python main.py
    ```
@@ -110,6 +117,7 @@ Calculate the environmental impact of AI model usage.
 ```
 
 **Response:**
+
 ```json
 {
   "model": "gpt-4o",
@@ -142,6 +150,7 @@ Get list of supported AI models.
 ### API Key Authentication
 
 Enable in config:
+
 ```json
 {
   "security": {
@@ -151,6 +160,7 @@ Enable in config:
 ```
 
 Set environment variable:
+
 ```bash
 export API_KEY="your-secret-api-key"
 ```
@@ -158,6 +168,7 @@ export API_KEY="your-secret-api-key"
 ### Webhook Signature Verification
 
 Enable HMAC-SHA256 signature verification:
+
 ```json
 {
   "security": {
@@ -167,27 +178,27 @@ Enable HMAC-SHA256 signature verification:
 ```
 
 Set webhook secret:
+
 ```bash
 export WEBHOOK_SECRET="your-webhook-secret"
 ```
 
 ## 🧪 **Testing**
 
-Run the complete test suite:
+Run the test suite:
 
 ```bash
-# Run all tests with coverage
-pytest tests/ --cov=main --cov-report=html
+# Run all tests
+pytest tests/ --tb=short
 
-# Run specific test categories
-pytest tests/test_domain/ -v
-pytest tests/test_api/ -v
+# Run specific tests
+pytest tests/test_simple.py -v
 
-# Check test coverage
-open htmlcov/index.html
+# Test application creation
+python -c "from src.application import create_app; print('✅ App created')"
 ```
 
-**Current Test Coverage: 99%**
+**Focus**: Integration tests for end-to-end workflows
 
 ## 🚀 **Deployment**
 
@@ -210,6 +221,7 @@ CMD ["python", "main.py"]
 ### Environment-specific Deployment
 
 **Production:**
+
 ```bash
 export ENVIRONMENT=production
 export API_KEY="prod-api-key"
@@ -227,24 +239,22 @@ The service includes structured logging and health endpoints for monitoring:
 
 ## 🤝 **Contributing**
 
-We follow conventional commits and clean code practices:
+We follow TDD and clean architecture principles. See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feat/new-feature`
-3. **Make changes following SOLID principles**
-4. **Add tests** (maintain 99% coverage)
-5. **Commit using conventional commits**: `feat: add new calculation method`
-6. **Push and create a pull request**
+**Quick Start:**
 
-### Conventional Commits Format
+1. **Fork and clone**: `gh repo fork lietwin/ecolegit --clone`
+2. **Create feature branch**: `git checkout -b feat/new-feature`
+3. **Write test first**: Integration test covering main workflow
+4. **Implement feature**: Simple, focused implementation
+5. **Create PR**: `gh pr create --title "feat: description"`
+
+### Commit Format
 
 - `feat:` New features
 - `fix:` Bug fixes
-- `docs:` Documentation changes
-- `style:` Code style changes
-- `refactor:` Code refactoring
-- `test:` Test additions/modifications
-- `chore:` Maintenance tasks
+- `docs:` Documentation
+- `test:` Test additions
 
 ## 📄 **License**
 
@@ -254,7 +264,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [EcoLogits](https://github.com/genai-impact/ecologits) - Environmental impact calculation library
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
-- [Make.com](https://make.com/) - Webhook integration platform
 
 ## 📞 **Support**
 

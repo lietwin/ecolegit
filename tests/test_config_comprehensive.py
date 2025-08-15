@@ -436,8 +436,11 @@ class TestEnvironmentVariableHandling:
     @patch.dict(os.environ, {"PORT": "not_a_number"})
     def test_invalid_port_environment_variable(self):
         """Test handling of invalid PORT environment variable."""
-        with pytest.raises(ValueError):
-            AppConfig.from_dict({})
+        # Should handle gracefully now, not raise ValueError
+        config = AppConfig.from_dict({})
+        # Should use default port when invalid
+        from src.config.constants import DefaultValues
+        assert config.port == DefaultValues.DEFAULT_PORT
 
 
 class TestModelMappingsHandling:

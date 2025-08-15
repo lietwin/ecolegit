@@ -59,13 +59,37 @@ class AppConfig:
     webhook_secret: Optional[str] = None
 
     @classmethod
+    def _get_environment(cls) -> Environment:
+        """Get environment with graceful handling of invalid values."""
+        env_str = os.getenv(EnvironmentVariables.ENVIRONMENT, Environment.DEVELOPMENT)
+        try:
+            return Environment(env_str)
+        except ValueError:
+            logger.warning(f"Invalid environment value '{env_str}', defaulting to development")
+            return Environment.DEVELOPMENT
+    
+    @classmethod
+    def _get_port(cls) -> int:
+        """Get port with graceful handling of invalid values."""
+        port_str = os.getenv(EnvironmentVariables.PORT, str(DefaultValues.DEFAULT_PORT))
+        try:
+            port = int(port_str)
+            if port < 1 or port > 65535:
+                logger.warning(f"Invalid port value '{port}', using default {DefaultValues.DEFAULT_PORT}")
+                return DefaultValues.DEFAULT_PORT
+            return port
+        except ValueError:
+            logger.warning(f"Invalid port value '{port_str}', using default {DefaultValues.DEFAULT_PORT}")
+            return DefaultValues.DEFAULT_PORT
+    
+    @classmethod
     def from_dict(cls, config_dict: Dict) -> "AppConfig":
         """Create configuration from dictionary."""
-        security_dict = config_dict.get(ConfigKeys.SECURITY, {})
-        rate_limit_dict = config_dict.get(ConfigKeys.RATE_LIMITING, {})
+        security_dict = config_dict.get(ConfigKeys.SECURITY, {}) or {}
+        rate_limit_dict = config_dict.get(ConfigKeys.RATE_LIMITING, {}) or {}
         
         return cls(
-            model_mappings=config_dict.get(ConfigKeys.MODEL_MAPPINGS, ModelMappings.DEFAULT_MAPPINGS.copy()),
+            model_mappings=config_dict.get(ConfigKeys.MODEL_MAPPINGS) if ConfigKeys.MODEL_MAPPINGS in config_dict else ModelMappings.DEFAULT_MAPPINGS.copy(),
             security=SecurityConfig(
                 enable_auth=security_dict.get(ConfigKeys.ENABLE_AUTH, False),
                 enable_webhook_signature=security_dict.get(ConfigKeys.ENABLE_WEBHOOK_SIGNATURE, False),
@@ -76,8 +100,8 @@ class AppConfig:
                 requests_per_minute=rate_limit_dict.get(ConfigKeys.REQUESTS_PER_MINUTE, DefaultValues.DEFAULT_REQUESTS_PER_MINUTE),
                 enabled=rate_limit_dict.get(ConfigKeys.ENABLED, True)
             ),
-            environment=Environment(os.getenv(EnvironmentVariables.ENVIRONMENT, Environment.DEVELOPMENT)),
-            port=int(os.getenv(EnvironmentVariables.PORT, DefaultValues.DEFAULT_PORT)),
+            environment=cls._get_environment(),
+            port=cls._get_port(),
             api_key=os.getenv(EnvironmentVariables.API_KEY),
             webhook_secret=os.getenv(EnvironmentVariables.WEBHOOK_SECRET)
         )
@@ -161,3 +185,6 @@ class ConfigLoader:
         except (IOError, OSError) as e:
             logger.error(f"Error saving config file {self.config_file}: {e}")
             raise ConfigurationError(f"Error saving config file: {e}") from e
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error: {e}")
+            raise ConfigurationError(f"Configuration serialization failed: {e}") from e
