@@ -88,18 +88,47 @@ class ImpactCalculationService:
         # First try smart normalization for common typos
         normalized = normalize_model_name(model_name)
         
+        # Security: Validate the normalized model name to prevent bypasses
+        self._validate_model_name_security(normalized)
+        
         # Then check config mappings (for both original and normalized names)
         mapped = self._config.model_mappings.get(normalized.lower())
         if mapped:
+            # Security: Also validate mapped model name
+            self._validate_model_name_security(mapped)
             return mapped
             
         # Try original name in config as fallback
         mapped_original = self._config.model_mappings.get(model_name.lower())
         if mapped_original:
+            # Security: Also validate original mapped model name
+            self._validate_model_name_security(mapped_original)
             return mapped_original
             
-        # Return normalized name if no config mapping found
         return normalized
+
+    def _validate_model_name_security(self, model_name: str) -> None:
+        """Validate model name against security constraints.
+        
+        This ensures that normalized/mapped model names still pass security validation
+        to prevent potential bypasses of the original input validation.
+        """
+        # Check for empty/whitespace-only strings first
+        if not model_name.strip():
+            raise ValueError(f"Model name cannot be empty after normalization: {model_name}")
+        
+        # Additional security checks
+        if len(model_name) > 100:  # Same limit as Pydantic Field
+            raise ValueError(f"Model name too long: {model_name}")
+        
+        # Use the same validation logic as the Pydantic validator
+        # Only check if it has content after removing allowed special chars
+        clean_name = model_name.replace('-', '').replace('.', '').replace('_', '')
+        
+        # Ensure only ASCII alphanumeric characters (more restrictive than isalnum())
+        if not clean_name.isascii() or not clean_name.isalnum():
+            from ..config.constants import ErrorMessages
+            raise ValueError(f"{ErrorMessages.MODEL_NAME_INVALID_CHARS}: {model_name}")
 
 
 class CalculationIdService:
